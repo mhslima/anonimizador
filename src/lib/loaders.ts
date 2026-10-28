@@ -1,5 +1,6 @@
 // Browser-only loaders: turn a PDF, an image or pasted text into rendered pages with word boxes.
-// Everything runs locally; the OCR worker, engine and Portuguese data are served from /tesseract.
+// Everything runs locally: the web app serves the OCR worker, engine and Portuguese data from
+// /tesseract; the offline single-file build embeds them and calls configureEngines().
 import type { PageData, Word } from "./layout";
 
 export type Progress = (msg: string, fraction?: number) => void;
@@ -14,6 +15,24 @@ function canvasOf(w: number, h: number) {
   return c;
 }
 
+// ---------- Engine sources ----------
+
+export interface EngineSources {
+  /**
+   * A worker script that already contains the OCR engine and answers requests for
+   * `${langPath}/por.traineddata.gz` itself, so the worker never loads anything else.
+   */
+  tesseract?: { workerPath: string; langPath: string };
+  /** Installs pdf.js' worker on the main thread (sets globalThis.pdfjsWorker). */
+  pdfWorker?: () => Promise<void>;
+}
+
+let sources: EngineSources = {};
+
+export function configureEngines(s: EngineSources) {
+  sources = s;
+}
+
 // ---------- OCR ----------
 
 type TessWorker = Awaited<ReturnType<typeof import("tesseract.js").createWorker>>;
@@ -24,15 +43,27 @@ async function getOcrWorker(): Promise<TessWorker> {
   if (!workerPromise) {
     workerPromise = (async () => {
       const { createWorker } = await import("tesseract.js");
+      const logger = (m: { status: string; progress: number }) => {
+        if (m.status === "recognizing text" && ocrListener) ocrListener(m.progress);
+      };
+      const embedded = sources.tesseract;
+      if (embedded) {
+        return createWorker("por", 1, {
+          workerPath: embedded.workerPath,
+          workerBlobURL: false,
+          langPath: embedded.langPath,
+          cacheMethod: "none",
+          gzip: true,
+          logger,
+        });
+      }
       const base = new URL("/tesseract/", window.location.href).href;
       return createWorker("por", 1, {
         workerPath: base + "worker.min.js",
         corePath: base,
         langPath: base.replace(/\/$/, ""),
         gzip: true,
-        logger: (m: { status: string; progress: number }) => {
-          if (m.status === "recognizing text" && ocrListener) ocrListener(m.progress);
-        },
+        logger,
       });
     })();
     workerPromise.catch(() => (workerPromise = null));
@@ -68,6 +99,11 @@ async function ocrCanvas(
 
 async function loadPdfjs() {
   const pdfjs = await import("pdfjs-dist");
+  // Compile-time flag so the offline build does not also embed the worker as a separate URL asset.
+  if (import.meta.env["VITE_PSI_OFFLINE"]) {
+    await sources.pdfWorker?.();
+    return pdfjs;
+  }
   const workerUrl = (await import("pdfjs-dist/build/pdf.worker.min.mjs?url")).default;
   pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
   return pdfjs;

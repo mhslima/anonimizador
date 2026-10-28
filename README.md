@@ -15,6 +15,14 @@ Desenvolvido por Marcio Lima · 2026 · Versão 1.0
 - A detecção é por regras (`src/lib/detect.ts`) e pode falhar: o resultado deve sempre ser
   conferido com o documento original.
 
+## Usar no computador, sem internet
+
+Baixe o arquivo [`baixar/Prontuario-Sem-Identificacao.html`](baixar/Prontuario-Sem-Identificacao.html)
+(botão "Download raw file" no GitHub) e abra com dois cliques no Chrome ou no Edge. É um único
+arquivo (~10 MB) com tudo embutido — OCR, leitor de PDF e telas — e funciona sem internet.
+
+Para gerar o arquivo de novo depois de mudar o código: `bun run build:offline`.
+
 Código principal: `src/lib/detect.ts` (detecção), `src/lib/layout.ts` (texto ↔ áreas na página),
 `src/lib/loaders.ts` (PDF, imagem, texto, OCR), `src/lib/exporter.ts` (PDF final),
 `src/components/anon/` (telas). Testes: `bun run test`.
