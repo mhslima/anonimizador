@@ -1,3 +1,26 @@
+# Prontuário Sem Identificação
+
+Anonimizador de documentos médicos que roda 100% no navegador. Recebe um PDF (com texto ou
+digitalizado), uma foto de exame ou o texto de um prontuário, encontra os dados que identificam
+paciente e médico (nome, CPF, RG, cartão SUS, CRM, prontuário/convênio, endereço, CEP, telefone,
+e-mail, instituição), deixa a pessoa revisar e gera um novo PDF com etiquetas como `[PACIENTE]`
+no lugar — além do texto anonimizado para colar numa IA.
+
+Desenvolvido por Marcio Lima · 2026 · Versão 1.0
+
+- Nenhum arquivo sai do computador: OCR (tesseract.js, português) e leitura de PDF (pdf.js) são
+  servidos de `public/` e executados no navegador.
+- O PDF final é rasterizado com as áreas pintadas por cima, então o texto original não fica
+  escondido por baixo das etiquetas.
+- A detecção é por regras (`src/lib/detect.ts`) e pode falhar: o resultado deve sempre ser
+  conferido com o documento original.
+
+Código principal: `src/lib/detect.ts` (detecção), `src/lib/layout.ts` (texto ↔ áreas na página),
+`src/lib/loaders.ts` (PDF, imagem, texto, OCR), `src/lib/exporter.ts` (PDF final),
+`src/components/anon/` (telas). Testes: `bun run test`.
+
+---
+
 # Welcome to your Lovable project
 
 This project was built with [Lovable](https://lovable.dev).

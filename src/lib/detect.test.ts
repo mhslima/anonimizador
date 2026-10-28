@@ -13,7 +13,9 @@ describe("detectores", () => {
     expect(types("CPF: 529.982.247-25")).toContain("CPF:529.982.247-25");
   });
   it("detecta nome do paciente pelo rótulo", () => {
-    expect(types("Paciente: Maria da Silva Souza   Idade: 45 anos")).toContain("PACIENTE:Maria da Silva Souza");
+    expect(types("Paciente: Maria da Silva Souza   Idade: 45 anos")).toContain(
+      "PACIENTE:Maria da Silva Souza",
+    );
   });
   it("detecta médico e CRM", () => {
     const r = types("Médico solicitante: Dr. João Pereira CRM-SP 123456");
@@ -27,9 +29,25 @@ describe("detectores", () => {
   });
   it("substitui o nome em todas as ocorrências", () => {
     const t = "Paciente: Ana Lima Costa\nA paciente Ana Lima Costa refere dor.";
-    expect(redactText(t, detectAll(t))).toBe("Paciente: [PACIENTE]\nA paciente [PACIENTE] refere dor.");
+    expect(redactText(t, detectAll(t))).toBe(
+      "Paciente: [PACIENTE]\nA paciente [PACIENTE] refere dor.",
+    );
   });
   it("não oculta dados clínicos", () => {
     expect(detectAll("Hemoglobina: 13,5 g/dL  Leucócitos: 7.200 /mm3")).toHaveLength(0);
+  });
+});
+
+describe("limites do nome", () => {
+  it("não inclui o CRM no nome do médico", () => {
+    const r = detectAll("Médico solicitante: Dr. João Pereira CRM-RJ 123456");
+    expect(r.find((m) => m.type === "MEDICO")?.text).toBe("João Pereira");
+  });
+});
+
+describe("títulos", () => {
+  it("pula Dra. entre o rótulo e o nome", () => {
+    const r = detectAll("Médico: Dra. Fernanda Rocha CRM-RJ 654321");
+    expect(r.filter((m) => m.type === "MEDICO").map((m) => m.text)).toEqual(["Fernanda Rocha"]);
   });
 });
